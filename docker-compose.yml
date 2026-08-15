@@ -1,29 +1,72 @@
 version: '3.8'
 
 services:
+  # 1. Base de données PostgreSQL + PostGIS
   postgres:
     image: postgis/postgis:16-3.4
     container_name: ta_postgres
+    restart: always
     environment:
-      POSTGRES_DB: trans_academia_db
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d trans_academia_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # 2. Base In-Memory Redis + Geo
   redis:
     image: redis/redis-stack:7.2.0-v9
     container_name: ta_redis
+    restart: always
     ports:
       - "6379:6379"
-      - "8001:8001" # Interface GUI Redis Insight sur http://localhost:8001
+      - "8001:8001" # Dashboard Redis Insight
+
+  # 3. Microservice Métier / Auth / gRPC (NestJS)
+  core-nestjs:
+    build:
+      context: ./services/core-nestjs
+      dockerfile: Dockerfile
+    container_name: ta_core_nestjs
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - PORT=3000
+      - GRPC_PORT=50051
+      - AUTH_MODE=MOCK
+    ports:
+      - "3000:3000"   # API REST
+      - "50051:50051" # Serveur gRPC
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # 4. Microservice Ingestion Temps Réel (Go)
+  ingestion-go:
+    build:
+      context: ./services/ingestion-go
+      dockerfile: Dockerfile
+    container_name: ta_ingestion_go
+    restart: always
+    environment:
+      - PORT=8080
+      - GRPC_CORE_HOST=core-nestjs:50051
+      - REDIS_HOST=redis:6379
+    ports:
+      - "8080:8080" # WebSockets GPS
+    depends_on:
+      - core-nestjs
+      - redis
 
 volumes:
   postgres_data:
