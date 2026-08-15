@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: ta_postgres
+    environment:
+      POSTGRES_DB: trans_academia_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d trans_academia_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis/redis-stack:7.2.0-v9
+    container_name: ta_redis
+    ports:
+      - "6379:6379"
+      - "8001:8001" # Interface GUI Redis Insight sur http://localhost:8001
+
+volumes:
+  postgres_data:
