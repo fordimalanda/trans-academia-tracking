@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "services/ingestion-go/pb/auth";
+
+service AuthService {
+  // Le service Go appelle NestJS pour valider le Token de l'agent
+  rpc ValidateAgentToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string agent_id = 2;
+  string agent_name = 3;
+  string error_message = 4;
+}

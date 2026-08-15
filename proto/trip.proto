@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package trip;
+
+option go_package = "services/ingestion-go/pb/trip";
+
+service TripService {
+  // Démarrer et arrêter un trajet de bus
+  rpc StartTrip (StartTripRequest) returns (StartTripResponse);
+  rpc StopTrip (StopTripRequest) returns (StopTripResponse);
+}
+
+message StartTripRequest {
+  string agent_id = 1;
+  string bus_number = 2;
+  string line_id = 3;
+  string direction = 4; // ALLER ou RETOUR
+  string driver_name = 5;
+  bool show_agent_name = 6;
+  bool show_driver_name = 7;
+}
+
+message StartTripResponse {
+  bool success = 1;
+  string trip_id = 2;
+  string error_message = 3;
+}
+
+message StopTripRequest {
+  string trip_id = 1;
+  string agent_id = 2;
+}
+
+message StopTripResponse {
+  bool success = 1;
+  string error_message = 2;
+}

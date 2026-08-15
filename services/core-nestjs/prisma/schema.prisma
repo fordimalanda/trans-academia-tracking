@@ -1,0 +1,71 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  AGENT
+  ADMIN
+}
+
+enum Direction {
+  ALLER
+  RETOUR
+}
+
+enum TripStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashé
+  fullName  String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  trips     Trip[]
+
+  @@map("users")
+}
+
+model Line {
+  id          String   @id @default(uuid())
+  code        String   @unique // Ex: L05
+  name        String   // Ex: N'djili Sainte Thérèse - UNIKIN
+  origin      String
+  destination String
+  trips       Trip[]
+  createdAt   DateTime @default(now())
+
+  @@map("lines")
+}
+
+model Trip {
+  id             String     @id @default(uuid())
+  busNumber      String
+  driverName     String?
+  showAgentName  Boolean    @default(true)
+  showDriverName Boolean    @default(true)
+  direction      Direction  @default(ALLER)
+  status         TripStatus @default(ACTIVE)
+
+  agentId   String
+  agent     User     @relation(fields: [agentId], references: [id])
+  lineId    String
+  line      Line     @relation(fields: [lineId], references: [id])
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([status, lineId])
+  @@map("trips")
+}
